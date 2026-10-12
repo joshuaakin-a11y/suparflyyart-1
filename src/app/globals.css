@@ -82,7 +82,8 @@ body {
  */
 
 /* ─── Home scene: the balloon over the city ──────────────────────────────────
- * The scene fills the whole screen (no header). The "stage" is a box in the
+ * The scene fills the whole screen (no header). The "stage" (inside the
+ * "track") is a box in the
  * artwork's 2560×1441 frame, scaled to cover (k) plus 4% spare so the depth
  * planes can move without showing an edge. Every layer is placed in that
  * frame, so they stay registered at every size.
@@ -102,9 +103,17 @@ body {
   --cy: 0;
 }
 
-.scene-stage {
+/* The track holds the stage and is what a phone scrolls across. It clips the
+   stage, so the scroll range is exactly the track — never the stage's edges. */
+.scene-track {
   --k: calc(max(100cqw / 2560, 100cqh / 1441) * 1.04);
   --w: calc(2560 * var(--k));
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+}
+
+.scene-stage {
   position: absolute;
   width: var(--w);
   height: calc(1441 * var(--k));
@@ -226,17 +235,34 @@ body {
   pointer-events: none;
 }
 
-/* Tall screens can't hold both the man and the balloon: the camera pans from
-   him across to the balloon, then rests there. */
+/* Tall screens (phones) can't hold both the man and the balloon, so the scene
+   becomes a sideways scroller: the visitor swipes from the man across to the
+   balloon. The stage hangs 2% of its width off each end (outside the scroll
+   range), so the depth planes can shift with the swipe without showing an
+   edge. SceneScroll sets the starting position (on the man) and gives a small
+   nudge to show it moves; SceneCamera turns the swipe into parallax. */
+@media (max-aspect-ratio: 1/1) {
+  .scene {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    scrollbar-width: none;
+  }
+  .scene::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @container (max-aspect-ratio: 1/1) {
+  /* The track is 4% narrower than the stage, which hangs 2% off each end. */
+  .scene-track {
+    right: auto;
+    width: calc(var(--w) * 0.96);
+  }
   .scene-stage {
-    --from: calc(50cqw - 0.26 * var(--w));
-    --to: calc(50cqw - 0.69 * var(--w));
-    left: 0;
-    translate: var(--to) 0;
-    animation:
-      scene-settle 4.5s cubic-bezier(0.22, 1, 0.36, 1) both,
-      scene-pan 7s cubic-bezier(0.45, 0, 0.25, 1) 1.2s both;
+    left: calc(var(--w) * -0.02);
+    transform-origin: 26% 45%;
   }
 }
 
@@ -252,11 +278,6 @@ body {
 @keyframes scene-settle {
   from { transform: scale(1.07); }
   to { transform: none; }
-}
-
-@keyframes scene-pan {
-  from { translate: var(--from) 0; }
-  to { translate: var(--to) 0; }
 }
 
 @keyframes man-sway {

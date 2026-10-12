@@ -180,9 +180,12 @@ export function IntroSequence({ from = "quote", quoteAs: QuoteHeading = "h2" }: 
   return (
     <section aria-live="polite" className="fixed inset-0 z-40 bg-sunset">
       <div ref={quoteRef} className="absolute inset-0 flex items-center justify-center px-6 text-center">
-        <QuoteHeading className="max-w-[32ch] font-display text-[clamp(2.25rem,5vw,4.5rem)] font-normal leading-[1.08] tracking-[-0.01em] text-ink text-balance">
-          <span className="block">You must first see your future.</span>
-          <span className="mt-[0.35em] block">Only then can you create it.</span>
+        {/* One sentence per line at every width: the size follows the screen width
+            (6vw fits the longer sentence inside the side padding on a 320px phone)
+            up to 4.5rem on desktop, and lines never wrap. */}
+        <QuoteHeading className="font-display text-[clamp(1rem,6vw,4.5rem)] font-normal leading-[1.08] tracking-[-0.01em] text-ink">
+          <span className="block whitespace-nowrap">You must first see your future.</span>
+          <span className="mt-[0.35em] block whitespace-nowrap">Only then can you create it.</span>
         </QuoteHeading>
       </div>
 

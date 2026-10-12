@@ -11,11 +11,24 @@ const DRIFT_X = 0.55;
 const DRIFT_Y = 0.3;
 /** How quickly the camera catches up with its target, per second (higher = snappier). */
 const FOLLOW = 2.6;
+/**
+ * On phones the scene scrolls sideways. Swiping also moves the camera (up to
+ * this much of its −1…1 range from one end to the other) so the planes slide
+ * past each other as you swipe — near ones faster than far ones. The idle
+ * drift is smaller there so the two together stay inside the stage's spare
+ * edge (see .scene-stage in globals.css).
+ */
+const SCROLL_DEPTH = 0.75;
+const SCROLL_DRIFT = 0.35;
+/** Never let the camera go further than this, so no plane shows an edge. */
+const MAX_TRAVEL = 1.15;
 
 /**
  * The scene's camera. It drifts slowly on its own (so the depth reads even on a
  * phone, with no pointer), and on devices with a mouse it leans toward the
- * pointer. Each frame it writes the camera position (−1…1) to --cx / --cy on
+ * pointer. On phones, where the scene scrolls sideways, the swipe position
+ * also drives the camera, so the planes slide past each other as you swipe.
+ * Each frame it writes the camera position (−1…1) to --cx / --cy on
  * the enclosing scene; the CSS turns that into a different offset for each
  * depth plane — far sky barely moves, the plaza shears in perspective, the man
  * moves with the ground he stands on. Renders nothing; off for reduced motion.
@@ -48,7 +61,15 @@ export function SceneCamera() {
       const k = 1 - Math.exp(-FOLLOW * dt); // frame-rate independent easing
       x += (tx - x) * k;
       y += (ty - y) * k;
-      scene.style.setProperty("--cx", x.toFixed(4));
+      // Sideways-scrolling scene (phones): the swipe drives the camera directly, no lag.
+      const range = scene.scrollWidth - scene.clientWidth;
+      let cx = x;
+      if (range > 1) {
+        const progress = scene.scrollLeft / range; // 0 … 1
+        cx = x * (SCROLL_DRIFT / DRIFT_X) + (progress * 2 - 1) * SCROLL_DEPTH;
+      }
+      cx = Math.max(-MAX_TRAVEL, Math.min(MAX_TRAVEL, cx));
+      scene.style.setProperty("--cx", cx.toFixed(4));
       scene.style.setProperty("--cy", y.toFixed(4));
       raf = visible ? requestAnimationFrame(tick) : 0;
     };

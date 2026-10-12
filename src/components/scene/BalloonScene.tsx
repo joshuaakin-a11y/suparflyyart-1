@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 import { SCENE_IMAGES } from "@/lib/scene/assets";
 import { SceneCamera } from "./SceneCamera";
+import { SceneScroll } from "./SceneScroll";
 
 /** A layer's box in the 2560×1441 frame, in % — printed by scripts/cut-scene.py. */
 type Box = { left: number; top: number; width: number; height: number };
@@ -44,43 +45,47 @@ export function BalloonScene() {
         SUPARFLYY — you must first see your future
       </h1>
 
-      <div className="scene-stage">
-        <div className="scene-far">
-          <Image
-            src={SCENE_IMAGES.sky}
-            unoptimized
-            alt="At sunset, a man holding a blank canvas stands on a wet plaza and watches a red hot-air balloon marked with an S rise over the city skyline."
-            fill
-            preload
-            sizes="100vw"
-            className="object-cover"
-          />
-          <div className="sun-glow" aria-hidden="true" />
-        </div>
-
-        <div className="scene-ground" aria-hidden="true">
-          <Image src={SCENE_IMAGES.sky} unoptimized alt="" fill sizes="100vw" className="object-cover" />
-        </div>
-
-        <div className="scene-balloon" style={place(BALLOON)} aria-hidden="true">
-          <div className="balloon-float">
-            <Image src={SCENE_IMAGES.balloon} unoptimized alt="" fill sizes="20vw" className="object-contain" />
+      <div className="scene-track">
+        <div className="scene-stage">
+          <div className="scene-far">
+            <Image
+              src={SCENE_IMAGES.sky}
+              unoptimized
+              alt="At sunset, a man holding a blank canvas stands on a wet plaza and watches a red hot-air balloon marked with an S rise over the city skyline."
+              fill
+              preload
+              sizes="100vw"
+              className="object-cover"
+            />
+            <div className="sun-glow" aria-hidden="true" />
           </div>
-        </div>
 
-        <div className="scene-man" style={place(MAN)} aria-hidden="true">
-          <div className="man-shadow" />
-          <div className="man-figure">
-            <Image src={SCENE_IMAGES.man} unoptimized alt="" fill preload sizes="25vw" className="object-contain" />
-            <div className="canvas-rock" style={place(CANVAS, MAN)}>
-              <Image src={SCENE_IMAGES.canvas} unoptimized alt="" fill sizes="15vw" className="object-contain" />
-              <div className="canvas-sheen" />
+          <div className="scene-ground" aria-hidden="true">
+            <Image src={SCENE_IMAGES.sky} unoptimized alt="" fill sizes="100vw" className="object-cover" />
+          </div>
+
+          <div className="scene-balloon" style={place(BALLOON)} aria-hidden="true">
+            <div className="balloon-float">
+              <Image src={SCENE_IMAGES.balloon} unoptimized alt="" fill sizes="20vw" className="object-contain" />
+            </div>
+          </div>
+
+          <div className="scene-man" style={place(MAN)} aria-hidden="true">
+            <div className="man-shadow" />
+            <div className="man-figure">
+              <Image src={SCENE_IMAGES.man} unoptimized alt="" fill preload sizes="25vw" className="object-contain" />
+              <div className="canvas-rock" style={place(CANVAS, MAN)}>
+                <Image src={SCENE_IMAGES.canvas} unoptimized alt="" fill sizes="15vw" className="object-contain" />
+                <div className="canvas-sheen" />
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <SceneCamera />
+      {/* Phones: start on the man; the visitor swipes across to the balloon. */}
+      <SceneScroll startAt={(MAN.left + MAN.width / 2) / 100} />
     </section>
   );
 }
