@@ -161,8 +161,20 @@ canvas_a = cv2.GaussianBlur(board_hull.astype(np.float32), (0, 0), 0.7 * f)
 # The man: u2net's body matte, minus anything below his shoes (wet-floor
 # reflections) and minus the board.
 rows = np.nonzero((body > 0.5).any(1))[0]
-feet = rows.max()
+top, feet = rows.min(), rows.max()
+# The shoes: u2net is unsure of the left shoe (it's lit like the wet floor and
+# came out half see-through), so over the bottom eighth of the figure take
+# whichever model is more confident.
+low = top + int(0.87 * (feet - top))
+body[low : feet + px(2)] = np.maximum(body[low : feet + px(2)], whole[low : feet + px(2)])
 body[feet + px(2) :] = 0
+# Solid core: everything clearly inside the figure is fully opaque, so no part
+# of him is ever see-through; only the outermost edge stays soft.
+solid = (body > 0.5).astype(np.uint8)
+cnts, _ = cv2.findContours(solid, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+cv2.drawContours(solid, cnts, -1, 1, cv2.FILLED)  # fill holes
+core = cv2.erode(solid, np.ones((odd(3),) * 2, np.uint8))
+body = np.maximum(body, core.astype(np.float32))
 man_a = body * (1 - np.clip(board_hull.astype(np.float32), 0, 1))
 
 def place(a: np.ndarray) -> np.ndarray:
@@ -172,30 +184,34 @@ def place(a: np.ndarray) -> np.ndarray:
 
 man_full, canvas_full = place(man_a), place(canvas_a)
 figure = (np.maximum(man_full, canvas_full) > 0.04).astype(np.uint8) * 255
-# Repaint the plaza and sky behind the figure. Everything there — sky bands,
-# skyline, flower bed, wet tiles — runs sideways, so each row is filled by
-# blending the colour just left of the hole into the colour just right of it,
-# and texture (fine detail only) is borrowed from the scene beside the figure.
-fill = cv2.dilate(figure, np.ones((odd(7),) * 2, np.uint8))
-src = sky.astype(np.float32)
-detail = src - cv2.GaussianBlur(src, (0, 0), 3 * f)
-hx0, hx1 = np.nonzero(fill.any(0))[0][[0, -1]]
-shift = (hx1 - hx0) + px(30)  # sample texture from just right of the hole
-patch = src.copy()
-ring = px(5)
+# Repaint the plaza and sky behind the figure. Only a narrow strip next to his
+# outline is ever revealed (the layers shift a few dozen pixels at most), so
+# each row of the hole is filled by mirroring the real scene across the hole's
+# edge: the left half from just left of it, the right half from just right of
+# it. The fill is continuous with its surroundings and keeps their real detail
+# (flowers, tiles, reflections) sharp — nothing is blurred or blended. Where
+# the two halves meet (the middle of his body) is never seen.
+fill = cv2.dilate(figure, np.ones((odd(7),) * 2, np.uint8)) > 0
+src = sky.copy()
 for y in np.nonzero(fill.any(1))[0]:
-    xs = np.nonzero(fill[y])[0]
-    l, r = xs.min(), xs.max()
-    a_ = src[y, max(0, l - ring) : l].mean(0) if l > 0 else src[y, r + 1]
-    b_ = src[y, r + 1 : r + 1 + ring].mean(0) if r + 1 < W else a_
-    t = np.linspace(0, 1, r - l + 1)[:, None]
-    sx = np.clip(np.arange(l, r + 1) + shift, 0, W - 1)
-    patch[y, l : r + 1] = a_ * (1 - t) + b_ * t + 0.9 * detail[y, sx]
-# Smooth the low frequencies vertically so rows agree, then feather the patch in.
-low = cv2.GaussianBlur(patch, (0, 0), sigmaX=0.6 * f, sigmaY=1.2 * f)
-feather = cv2.GaussianBlur(fill.astype(np.float32) / 255, (0, 0), 1.5 * f)
-feather = np.maximum(feather, (fill > 0).astype(np.float32))[..., None]
-sky = np.clip(src * (1 - feather) + low * feather, 0, 255).astype(np.uint8)
+    row = fill[y]
+    xs = np.nonzero(row)[0]
+    # Contiguous runs of the hole on this row (e.g. each leg separately).
+    breaks = np.nonzero(np.diff(xs) > 1)[0]
+    for run in np.split(xs, breaks + 1):
+        l, r = run[0], run[-1]
+        mid = (l + r) // 2
+        for x in range(l, r + 1):
+            if x <= mid and l > 0:
+                sx = l - 1 - (x - l)  # mirror of the left neighbour
+            else:
+                sx = r + 1 + (r - x)  # mirror of the right neighbour
+            sx = int(np.clip(sx, 0, W - 1))
+            # Never copy from inside another part of the hole.
+            while fill[y, sx] and 0 < sx < W - 1:
+                sx += -1 if sx < x else 1
+            src[y, x] = sky[y, sx]
+sky = src
 
 # The man's layer keeps a few pixels of the original under the board's right
 # edge (where his hand grips it) so the board can rock without opening a gap.

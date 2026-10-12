@@ -9,7 +9,7 @@ type Box = { left: number; top: number; width: number; height: number };
 
 /** Re-run scripts/cut-scene.py and update these if the artwork changes. */
 const BALLOON: Box = { left: 61.423, top: 17.003, width: 15.61, height: 34.857 };
-const MAN: Box = { left: 14.294, top: 9.989, width: 21.292, height: 88.098 };
+const MAN: Box = { left: 14.234, top: 9.989, width: 21.352, height: 88.098 };
 const CANVAS: Box = { left: 11.782, top: 31.243, width: 11.423, height: 29.862 };
 
 /** Position a box absolutely, in % of its parent's box. */
