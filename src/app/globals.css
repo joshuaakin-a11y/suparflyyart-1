@@ -76,54 +76,10 @@ body {
 }
 
 /*
- * "Light lift": a full-screen layer of the same white the homepage faded into,
- * fading out to reveal the page beneath it. Used on /future.
+ * Transitions between the intro, the quote, SEE and the balloon scene are
+ * script-driven (Web Animations API) — see IntroSequence, LightWash and
+ * SceneReveal — so a stylesheet reload can never restart them mid-sequence.
  */
-@keyframes light-lift {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.light-lift {
-  animation: light-lift 1.4s cubic-bezier(0.45, 0, 0.2, 1) 0.15s both;
-}
-
-/* A quicker lift, for the quote page: the words come up out of the light. */
-.light-lift-quick {
-  animation: light-lift 0.7s cubic-bezier(0.45, 0, 0.2, 1) 0.05s both;
-}
-
-/*
- * "Arrive": the camera coming to rest after the homepage dive — content starts
- * a touch closer and settles into place while the white lifts.
- */
-@keyframes arrive {
-  from {
-    transform: scale(1.06);
-  }
-  to {
-    transform: none;
-  }
-}
-
-.arrive {
-  animation: arrive 2s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .light-lift,
-  .light-lift-quick {
-    display: none;
-  }
-
-  .arrive {
-    animation: none;
-  }
-}
 
 /* ─── Home scene: the balloon over the city ──────────────────────────────────
  * The scene fills the whole screen (no header). The "stage" is a box in the

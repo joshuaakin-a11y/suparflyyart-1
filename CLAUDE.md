@@ -46,16 +46,25 @@ Rules:
 
 ## Pages & transitions
 
-Flow: `/` intro rain → click → camera dive → `/future` quote (readable 750ms) → fade into warm light → `/home` balloon scene.
+Flow: `/` intro rain → click → camera dive → quote → SEE → `/home` balloon scene. The quote and SEE are shown in place on `/` (`IntroSequence.tsx`), so there is only ONE page change in the whole sequence (to `/home`).
 
-Seamless rule: every hand-off passes through the same warm light `--sunset` (`#FFEACC`) — never white — so intro, quote and scene read as one continuous move (owner's goal: a natural transition into the 3D page). `LightWash` / `AutoAdvance` take a `tone` class for this.
+Seamless rules (owner's top priority — "no flickering"):
+- Every hand-off passes through the same warm light `--sunset` (`#FFEACC`) — never white.
+- Transitions are script-driven (Web Animations API), never CSS keyframes: a stylesheet reload (the dev server does this while building the next page) restarts CSS animations, which showed as the quote appearing twice.
+- One light layer stays mounted across quote and SEE; content only swaps while it fully covers the screen.
+- Never scale text while it's readable (re-rasterising when a transform ends is a visible flick).
+- The display font is loaded on the intro and awaited before the first lift (no font swap on screen).
 
-- `/` — S rain (`src/components/home/HomeExperience.tsx`). A click / tap / Enter anywhere starts the camera dive.
-- Exit = camera dive (inspired by the reference site's click: scene → accelerating push-in → cut to white → next room fades in from white). The whole rain layer scales around the click point: a small pull-back (anticipation, to 0.965), then an accelerating push-in to 14× with speed blur and overexposure (`DIVE_MS` 1350). The big cursor S stays at the focal point and melts away as the camera flies through it. From 55% of the dive a layer of the warm light (`LightWash.tsx`, `tone="bg-sunset"`) rises to solid — no rings or halos — holds ~160ms, then navigates.
-- `/future` — the quote "You must first see your future. Only then can you create it." centred, in Chakra Petch, on `bg-sunset`. Opens under the warm light (`.light-lift-quick`, ~0.75s, `ARRIVE_MS`) while the text settles (`.arrive`), stays fully readable for 750ms (`READ_MS`), then `AutoAdvance` fades back into the warm light (600ms, `LEAVE_MS`) and moves to `/home`.
-- `/home` — the balloon scene (see below). Opens under the warm light, which `SceneReveal.tsx` holds until every scene image has loaded and decoded (max 2.5s), then lifts over 1.4s; the camera settle is paused until then (`.scene[data-ready]`). This fixed a flicker where layers popped in mid-fade.
-- Dev only: `WarmRoutes.tsx` requests `/future` and `/home` early (from the intro and the quote) so the dev server builds them before they're needed — otherwise the first build caused a long pause and sometimes a reload that replayed the quote. Production prebuilds and prefetches, so it does nothing there.
-- Scene images are preloaded during the intro and the quote (`PreloadImages.tsx`, URLs in `src/lib/scene/assets.ts`). They're served `unoptimized` (already-compressed WebP from cut-scene.py) so their URLs are known ahead of time.
+- `/` — S rain (`src/components/home/HomeExperience.tsx`, phases `rain` → `diving` → `quote`). A click / tap / Enter anywhere starts the camera dive.
+- Camera dive (inspired by the reference site's click): the rain layer scales around the click point — small pull-back (0.965), then an accelerating push-in to 14× with speed blur and overexposure (`DIVE_MS` 1350). The big cursor S melts away at the focal point. From 55% a layer of the warm light (`LightWash.tsx`, `tone="bg-sunset"`) rises to solid, holds ~160ms, then `IntroSequence` takes over in the same frame (rain and enter button unmount under it).
+- `IntroSequence` (timings in its `T` constant):
+  - quote — "You must first see your future. Only then can you create it." centred, Chakra Petch 400. Light lifts 700ms, fully readable 750ms, sinks back into the light 600ms.
+  - SEE — "SEE" centred, Chakra Petch 300, uppercase, `clamp(4.5rem,17vw,13rem)`. Light lifts 650ms while the letter-spacing draws in from 0.9em to 0.32em over 1.4s (an eye focusing; equal left padding keeps it optically centred), rests 450ms, then the camera pushes through the word (scale 3.2 + blur, 900ms) as the light rises to solid over the last 600ms; holds 140ms; `router.push("/home")`.
+  - Reduced motion: plain cuts — quote 1.5s, SEE 1s, then `/home`.
+- `/future` and `/see` — the same sequence starting at the quote / at SEE, for direct visits.
+- `/home` — the balloon scene (see below). Opens under the warm light, which `SceneReveal.tsx` holds until every scene image has loaded and decoded (max 2.5s), then lifts over 1.4s; the camera settle is paused until then (`.scene[data-ready]`).
+- Dev only: `WarmRoutes.tsx` requests `/home` early so the dev server builds it before it's needed. Production prebuilds and prefetches, so it does nothing there.
+- Scene images are preloaded during the intro and the sequence (`PreloadImages.tsx`, URLs in `src/lib/scene/assets.ts`). They're served `unoptimized` (already-compressed WebP from cut-scene.py) so their URLs are known ahead of time.
 - `/shop`, `/collections`, `/art`, `/story`, `/journal`, `/contact` — "Opening soon" placeholders (`src/app/[section]`) until each is built. Section list lives in `src/lib/site/nav.ts`.
 - Reduced motion: no dive, washes, light lifts, draw-ins or settles; navigation is immediate.
 
